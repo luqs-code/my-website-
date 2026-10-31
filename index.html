@@ -666,8 +666,16 @@ async function refreshClubData(){
   if(contentMap.email)CFG.email=contentMap.email;
   // Display every managed price on the public Prices & Fees section.
   PUBLIC_PRICE_ROWS=prices.slice();renderPublicPrices();
-  // Apply matching driving-range basket prices while preserving the site's existing basket sizes.
+  // Apply managed driving-range basket prices while preserving the site's basket sizes.
   prices.forEach(r=>{const label=String(r.item||'').toLowerCase();if(!label.includes('driving range'))return;const amount=Number(r.amount);if(!Number.isFinite(amount))return;const size=label.includes('small')?30:label.includes('medium')?60:label.includes('large')?90:null;if(size!==null){const row=PRICES.find(p=>Number(p[0])===size);if(row)row[1]=amount;}});
+  // The Golf Day Estimator reads its prices from the same Supabase prices table.
+  const priceByName=new Map(prices.map(r=>[String(r.item||'').trim().toLowerCase(),Number(r.amount)]));
+  const managed=(name,fallback)=>{const v=priceByName.get(name.toLowerCase());return Number.isFinite(v)?v:fallback;};
+  CALC.green=managed('Golf day – green fee per golfer',CALC.green);
+  CALC.cart=managed('Golf day – golf cart',CALC.cart);
+  const cateringNames=[['Tea and snacks','Golf day – tea and snacks per golfer'],['Halfway house','Golf day – halfway house per golfer'],['Lunch','Golf day – lunch per golfer'],['Dinner and prize-giving','Golf day – dinner and prize-giving per golfer']];
+  cateringNames.forEach(([label,item])=>{const option=CALC.cat.find(c=>c[0]===label);if(option)option[1]=managed(item,option[1]);});
+  if(typeof drawCalc==='function')drawCalc();
   document.querySelectorAll('[data-hours]').forEach(e=>e.innerHTML=hrs(CLUB));
   if(cur==='events'&&typeof drawEList==='function')drawEList();
  }catch(err){console.warn('Lake Club Supabase read failed:',err)}
