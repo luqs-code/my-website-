@@ -644,7 +644,7 @@ function renderPublicPrices(){
 }
 async function refreshClubData(){
  try{
-  if(!publicSupabase){if(!window.supabase?.createClient)return;publicSupabase=window.supabase.createClient(PUBLIC_SUPABASE_URL,PUBLIC_SUPABASE_KEY)}
+  if(!publicSupabase){if(!window.supabase?.createClient)return;publicSupabase=window.supabase.createClient(PUBLIC_SUPABASE_URL,PUBLIC_SUPABASE_KEY,{global:{fetch:(url,options={})=>fetch(url,{...options,cache:'no-store'})}})}
   const names=['activity_hours','booking_rules','closed_dates','prices','events','website_content'];
   const results=await Promise.all(names.map(n=>publicSupabase.from(n).select('*')));
   for(const r of results)if(r.error)throw r.error;
