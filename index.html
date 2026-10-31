@@ -493,6 +493,7 @@ html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 96px)}
 
 <div id="pv" hidden><span>Previewing unpublished changes</span><button data-pv="edit">Back to editor</button><button data-pv="pub">Publish now</button></div>
 <footer id="ft"></footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>(()=>{
 const ADM='club-manager-jqz5589nlw';
 const CFG={email:'',fb:'',ig:'',phone:'011 421 1341',pro:'011 421 7441'};
@@ -624,6 +625,39 @@ const fullCfg=c=>{const x={...clone(BASE0),...clone(c||{})};x.acts={};KEYS.forEa
 function applyCfg(c){const x=fullCfg(c);EVENTS=(x.events||[]).filter(e=>e&&e.date&&e.title);CLUB.splice(0,CLUB.length,...wkRows(x.clubwk));PRICES.splice(0,PRICES.length,...x.prices);CLOSED=x.closed;CALC=x.calc;if(typeof drawCalc==='function')drawCalc();ADV=+x.adv||120;CM=x.cm||'';CFG.phone=x.phone;CFG.pro=x.pro;
  KEYS.forEach(k=>{const a=ACTS[k],y=x.acts[k];if(a.wk&&y.wk)a.wk=y.wk;a.h=a.wk?wkRows(a.wk):y.h;if(a.win||a.ses)a.cap=+y.cap||1;if(a.win&&y.win){a.win=y.win;if(!a.wk)a.slots=rng(...y.win)}if(a.ses&&y.ses){a.ses=y.ses;a.slots=y.ses.map((l,i)=>[IDS[i]||'s'+i,l])}});
  document.querySelectorAll('[data-hours]').forEach(e=>e.innerHTML=hrs(CLUB));foot()}
+// Shared Supabase read connection: dashboard writes; the public site reads.
+const PUBLIC_SUPABASE_URL='https://amqenbyonnomfstmrrzy.supabase.co';
+const PUBLIC_SUPABASE_KEY='sb_publishable_liMr6KCQ55sIcHK84OJ2ew_fSZ_Elqi';
+let publicSupabase=null;
+async function refreshClubData(){
+ try{
+  if(!publicSupabase){if(!window.supabase?.createClient)return;publicSupabase=window.supabase.createClient(PUBLIC_SUPABASE_URL,PUBLIC_SUPABASE_KEY)}
+  const names=['activity_hours','booking_rules','closed_dates','prices','events','website_content'];
+  const results=await Promise.all(names.map(n=>publicSupabase.from(n).select('*')));
+  for(const r of results)if(r.error)throw r.error;
+  const [hours,rules,closed,prices,events,content]=results.map(r=>r.data||[]);
+  const activityMap={'golf':'tee-times','bowls':'bowls','squash':'squash','driving range':'driving-range'};
+  for(const [activity,key] of Object.entries(activityMap)){
+   const rows=hours.filter(r=>String(r.activity||'').toLowerCase()===activity);if(!rows.length)continue;
+   const week=[null,null,null,null,null,null,null];
+   rows.forEach(r=>{const day=Number(r.day_of_week),i=day===0?6:day-1;week[i]=r.is_closed||!r.open_time||!r.close_time?null:[String(r.open_time).slice(0,5),String(r.close_time).slice(0,5)]});
+   ACTS[key].wk=week;ACTS[key].h=wkRows(week);
+   const rule=rules.find(r=>String(r.activity||'').toLowerCase()===activity);
+   if(rule){if(ACTS[key].win)ACTS[key].win[2]=Number(rule.interval_minutes)||ACTS[key].win[2];ACTS[key].cap=Number(rule.capacity)||ACTS[key].cap;}
+  }
+  if(ACTS['tee-times'].wk.some(Boolean))CLUB.splice(0,CLUB.length,...wkRows(ACTS['tee-times'].wk));
+  CLOSED=closed.map(r=>({date:r.closed_date,note:r.reason||''}));
+  EVENTS=events.map(r=>({date:r.event_date,title:r.name,desc:r.details||''})).filter(e=>e.date&&e.title);
+  const contentMap=Object.fromEntries(content.map(r=>[r.content_key,r.content_value||'']));
+  if(contentMap.phone)CFG.phone=contentMap.phone;
+  if(contentMap.email)CFG.email=contentMap.email;
+  // Apply matching driving-range basket prices while preserving the site's existing basket sizes.
+  prices.forEach(r=>{const label=String(r.item||'').toLowerCase();if(!label.includes('driving range'))return;const amount=Number(r.amount);if(!Number.isFinite(amount))return;const size=label.includes('small')?30:label.includes('medium')?60:label.includes('large')?90:null;if(size!==null){const row=PRICES.find(p=>Number(p[0])===size);if(row)row[1]=amount;}});
+  document.querySelectorAll('[data-hours]').forEach(e=>e.innerHTML=hrs(CLUB));
+  if(cur==='events'&&typeof drawEList==='function')drawEList();
+ }catch(err){console.warn('Lake Club Supabase read failed:',err)}
+}
+refreshClubData();setInterval(refreshClubData,60000);window.addEventListener('focus',refreshClubData);
 const isClosed=d=>CLOSED.some(c=>c.date===d);
 const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
 const gp=p=>p.split('.').reduce((o,k)=>o[k],D),sp=(p,v)=>{const a=p.split('.'),l=a.pop();a.reduce((o,k)=>o[k],D)[l]=v};
