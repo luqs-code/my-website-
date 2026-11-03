@@ -539,7 +539,7 @@ function rangeBody(){const a=ACTS[cur];
  <section><div class="wrap split"><div><p class="sub">At the range</p><h2>More than a bucket of balls.</h2></div><ul class="svc">${SERV.map(s=>`<li>${s}</li>`).join('')}</ul></div></section>
  <section class="alt"><div class="wrap split"><div>${hrs(a.h)}<p class="walk">Pay by walk-in service. No booking needed, just come along during opening hours.</p></div><div><p class="lede">Questions about baskets, coaching or clinics? Call the pro shop on <a href="tel:+27114217441">${CFG.pro}</a>, option 1.</p></div></div></section>`}
 function astroBody(){
- $('#pb').innerHTML=`<section><div class="wrap split"><div><p class="sub">At the club</p><h2>A sports arena beside the lake.</h2></div><div><p class="lede">The AstroPlex Sports Arena is the newest addition to the club. It is found at the same location as The Lake Club Benoni, on Lakefield Avenue in Lakefield, Benoni. Bookings for the arena are handled separately.</p><p style="margin-top:22px"><a class="btn fill" style="background:var(--fairway);color:#f4f4ec" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=Benoni+Lake+Club+Lakefield+Avenue+Benoni">Open in Google Maps</a></p></div></div></section>
+ $('#pb').innerHTML=`<section><div class="wrap split"><div><p class="sub">At the club</p><h2>A sports arena beside the lake.</h2></div><div><p class="lede">The AstroPlex Sports Arena is the newest addition to the club. It is found at the same location as The Lake Club Benoni, on Lakefield Avenue in Lakefield, Benoni. Bookings for the arena are handled separately.</p><p style="margin-top:22px;display:flex;gap:10px;flex-wrap:wrap"><a class="btn fill" style="background:var(--fairway);color:#f4f4ec" target="_blank" rel="noopener" href="https://astroplex.co.za/">Visit AstroPlex Website</a><a class="btn fill" style="background:transparent;color:var(--text);border:1px solid var(--rule)" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=Benoni+Lake+Club+Lakefield+Avenue+Benoni">Open in Google Maps</a></p></div></div></section>
  <section class="alt"><div class="wrap"><div class="agal">${$('#astroimgs').innerHTML}</div></div></section>`}
 const DECK={'tee-times':['g1','g2','g3'],'driving-range':['g2','g3','g1'],bowls:['b1','b2'],squash:['q1','q2'],astroplex:['s1','s2','s3']};
 function decorate(){const L=DECK[cur];if(!L)return;document.querySelectorAll('#pb>section').forEach((s,i)=>{[0,1].forEach(j=>{const sp=document.createElement('span');sp.className='dec '+L[(i+j)%L.length]+' '+((i+j)%2?'r':'l');sp.style.top=(8+((i*37+j*53)%70))+'%';sp.setAttribute('aria-hidden','true');s.insertBefore(sp,s.firstChild)})})}
@@ -625,8 +625,7 @@ CLUB.splice(0,CLUB.length,...wkRows(CLWK));document.querySelectorAll('[data-hour
 let CALC={green:190,cart:420,cat:[['No catering',0],['Tea and snacks',45],['Halfway house',70],['Lunch',160],['Dinner and prize-giving',240]]};
 let EVENTS=[];const BASE0=clone({events:[],calc:CALC,clubwk:CLWK,prices:PRICES,closed:[],adv:120,cm:'https://www.teesheet.co.za/visitorbookings.php',phone:CFG.phone,pro:CFG.pro,acts:Object.fromEntries(KEYS.map(k=>[k,{h:ACTS[k].h,wk:ACTS[k].wk,cap:ACTS[k].cap,win:ACTS[k].win,ses:ACTS[k].ses}]))});
 const fullCfg=c=>{const x={...clone(BASE0),...clone(c||{})};x.acts={};KEYS.forEach(k=>x.acts[k]={...clone(BASE0.acts[k]),...((c&&c.acts&&c.acts[k])||{})});return x};
-let SUPABASE_HOURS_LOADED=true; // Supabase owns public operating hours from the start; legacy config must never overwrite them.
-function applyCfg(c){const x=fullCfg(c);EVENTS=(x.events||[]).filter(e=>e&&e.date&&e.title);if(!SUPABASE_HOURS_LOADED)CLUB.splice(0,CLUB.length,...wkRows(x.clubwk));PRICES.splice(0,PRICES.length,...x.prices);CLOSED=x.closed;CALC=x.calc;if(typeof drawCalc==='function')drawCalc();ADV=+x.adv||120;CM=x.cm||'';CFG.phone=x.phone;CFG.pro=x.pro;
+function applyCfg(c){const x=fullCfg(c);EVENTS=(x.events||[]).filter(e=>e&&e.date&&e.title);CLUB.splice(0,CLUB.length,...wkRows(x.clubwk));PRICES.splice(0,PRICES.length,...x.prices);CLOSED=x.closed;CALC=x.calc;if(typeof drawCalc==='function')drawCalc();ADV=+x.adv||120;CM=x.cm||'';CFG.phone=x.phone;CFG.pro=x.pro;
  KEYS.forEach(k=>{const a=ACTS[k],y=x.acts[k];if(a.wk&&y.wk)a.wk=y.wk;a.h=a.wk?wkRows(a.wk):y.h;if(a.win||a.ses)a.cap=+y.cap||1;if(a.win&&y.win){a.win=y.win;if(!a.wk)a.slots=rng(...y.win)}if(a.ses&&y.ses){a.ses=y.ses;a.slots=y.ses.map((l,i)=>[IDS[i]||'s'+i,l])}});
  document.querySelectorAll('[data-hours]').forEach(e=>e.innerHTML=hrs(CLUB));foot()}
 // Shared Supabase read connection: dashboard writes; the public site reads.
@@ -646,15 +645,10 @@ function renderPublicPrices(){
 async function refreshClubData(){
  try{
   if(!publicSupabase){if(!window.supabase?.createClient)return;publicSupabase=window.supabase.createClient(PUBLIC_SUPABASE_URL,PUBLIC_SUPABASE_KEY,{global:{fetch:(url,options={})=>fetch(url,{...options,cache:'no-store'})}})}
-  // Load operating hours independently so an unrelated table error cannot
-  // prevent the public Golf hours from updating.
-  const hoursResult=await publicSupabase.from('activity_hours').select('*');
-  if(hoursResult.error)throw hoursResult.error;
-  const hours=hoursResult.data||[];
-  const names=['booking_rules','closed_dates','prices','events','website_content'];
+  const names=['activity_hours','booking_rules','closed_dates','prices','events','website_content'];
   const results=await Promise.all(names.map(n=>publicSupabase.from(n).select('*')));
   for(const r of results)if(r.error)throw r.error;
-  const [rules,closed,prices,events,content]=results.map(r=>r.data||[]);
+  const [hours,rules,closed,prices,events,content]=results.map(r=>r.data||[]);
   const activityMap={'golf':'tee-times','bowls':'bowls','squash':'squash','driving range':'driving-range'};
   for(const [activity,key] of Object.entries(activityMap)){
    const rows=hours.filter(r=>String(r.activity||'').toLowerCase()===activity);if(!rows.length)continue;
@@ -664,7 +658,7 @@ async function refreshClubData(){
    const rule=rules.find(r=>String(r.activity||'').toLowerCase()===activity);
    if(rule){if(ACTS[key].win)ACTS[key].win[2]=Number(rule.interval_minutes)||ACTS[key].win[2];ACTS[key].cap=Number(rule.capacity)||ACTS[key].cap;}
   }
-  if(ACTS['tee-times'].wk.some(Boolean)){CLUB.splice(0,CLUB.length,...wkRows(ACTS['tee-times'].wk));SUPABASE_HOURS_LOADED=true;}
+  if(ACTS['tee-times'].wk.some(Boolean))CLUB.splice(0,CLUB.length,...wkRows(ACTS['tee-times'].wk));
   CLOSED=closed.map(r=>({date:r.closed_date,note:r.reason||''}));
   EVENTS=events.map(r=>({date:r.event_date,title:r.name,desc:r.details||''})).filter(e=>e.date&&e.title);
   const contentMap=Object.fromEntries(content.map(r=>[r.content_key,r.content_value||'']));
