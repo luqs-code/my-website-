@@ -646,10 +646,15 @@ function renderPublicPrices(){
 async function refreshClubData(){
  try{
   if(!publicSupabase){if(!window.supabase?.createClient)return;publicSupabase=window.supabase.createClient(PUBLIC_SUPABASE_URL,PUBLIC_SUPABASE_KEY,{global:{fetch:(url,options={})=>fetch(url,{...options,cache:'no-store'})}})}
-  const names=['activity_hours','booking_rules','closed_dates','prices','events','website_content'];
+  // Load operating hours independently so an unrelated table error cannot
+  // prevent the public Golf hours from updating.
+  const hoursResult=await publicSupabase.from('activity_hours').select('*');
+  if(hoursResult.error)throw hoursResult.error;
+  const hours=hoursResult.data||[];
+  const names=['booking_rules','closed_dates','prices','events','website_content'];
   const results=await Promise.all(names.map(n=>publicSupabase.from(n).select('*')));
   for(const r of results)if(r.error)throw r.error;
-  const [hours,rules,closed,prices,events,content]=results.map(r=>r.data||[]);
+  const [rules,closed,prices,events,content]=results.map(r=>r.data||[]);
   const activityMap={'golf':'tee-times','bowls':'bowls','squash':'squash','driving range':'driving-range'};
   for(const [activity,key] of Object.entries(activityMap)){
    const rows=hours.filter(r=>String(r.activity||'').toLowerCase()===activity);if(!rows.length)continue;
