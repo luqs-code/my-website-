@@ -625,7 +625,8 @@ CLUB.splice(0,CLUB.length,...wkRows(CLWK));document.querySelectorAll('[data-hour
 let CALC={green:190,cart:420,cat:[['No catering',0],['Tea and snacks',45],['Halfway house',70],['Lunch',160],['Dinner and prize-giving',240]]};
 let EVENTS=[];const BASE0=clone({events:[],calc:CALC,clubwk:CLWK,prices:PRICES,closed:[],adv:120,cm:'https://www.teesheet.co.za/visitorbookings.php',phone:CFG.phone,pro:CFG.pro,acts:Object.fromEntries(KEYS.map(k=>[k,{h:ACTS[k].h,wk:ACTS[k].wk,cap:ACTS[k].cap,win:ACTS[k].win,ses:ACTS[k].ses}]))});
 const fullCfg=c=>{const x={...clone(BASE0),...clone(c||{})};x.acts={};KEYS.forEach(k=>x.acts[k]={...clone(BASE0.acts[k]),...((c&&c.acts&&c.acts[k])||{})});return x};
-function applyCfg(c){const x=fullCfg(c);EVENTS=(x.events||[]).filter(e=>e&&e.date&&e.title);CLUB.splice(0,CLUB.length,...wkRows(x.clubwk));PRICES.splice(0,PRICES.length,...x.prices);CLOSED=x.closed;CALC=x.calc;if(typeof drawCalc==='function')drawCalc();ADV=+x.adv||120;CM=x.cm||'';CFG.phone=x.phone;CFG.pro=x.pro;
+let SUPABASE_HOURS_LOADED=false;
+function applyCfg(c){const x=fullCfg(c);EVENTS=(x.events||[]).filter(e=>e&&e.date&&e.title);if(!SUPABASE_HOURS_LOADED)CLUB.splice(0,CLUB.length,...wkRows(x.clubwk));PRICES.splice(0,PRICES.length,...x.prices);CLOSED=x.closed;CALC=x.calc;if(typeof drawCalc==='function')drawCalc();ADV=+x.adv||120;CM=x.cm||'';CFG.phone=x.phone;CFG.pro=x.pro;
  KEYS.forEach(k=>{const a=ACTS[k],y=x.acts[k];if(a.wk&&y.wk)a.wk=y.wk;a.h=a.wk?wkRows(a.wk):y.h;if(a.win||a.ses)a.cap=+y.cap||1;if(a.win&&y.win){a.win=y.win;if(!a.wk)a.slots=rng(...y.win)}if(a.ses&&y.ses){a.ses=y.ses;a.slots=y.ses.map((l,i)=>[IDS[i]||'s'+i,l])}});
  document.querySelectorAll('[data-hours]').forEach(e=>e.innerHTML=hrs(CLUB));foot()}
 // Shared Supabase read connection: dashboard writes; the public site reads.
@@ -658,7 +659,7 @@ async function refreshClubData(){
    const rule=rules.find(r=>String(r.activity||'').toLowerCase()===activity);
    if(rule){if(ACTS[key].win)ACTS[key].win[2]=Number(rule.interval_minutes)||ACTS[key].win[2];ACTS[key].cap=Number(rule.capacity)||ACTS[key].cap;}
   }
-  if(ACTS['tee-times'].wk.some(Boolean))CLUB.splice(0,CLUB.length,...wkRows(ACTS['tee-times'].wk));
+  if(ACTS['tee-times'].wk.some(Boolean)){CLUB.splice(0,CLUB.length,...wkRows(ACTS['tee-times'].wk));SUPABASE_HOURS_LOADED=true;}
   CLOSED=closed.map(r=>({date:r.closed_date,note:r.reason||''}));
   EVENTS=events.map(r=>({date:r.event_date,title:r.name,desc:r.details||''})).filter(e=>e.date&&e.title);
   const contentMap=Object.fromEntries(content.map(r=>[r.content_key,r.content_value||'']));
