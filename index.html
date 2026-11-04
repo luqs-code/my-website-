@@ -583,7 +583,7 @@ function watch(){stop();if(!db||mode!=='book')return;
  un=db.collection('bookings').where('act','==',cur).onSnapshot(s=>{occ={};s.docs.forEach(x=>{const d=x.data()||{};if(d.date){const o=occ[d.date]=occ[d.date]||{};o[d.slot]=(o[d.slot]||0)+1}});paint()},()=>{});paint()}
 const full=(d,s)=>((occ[d]||{})[s]||0)>=ACTS[cur].cap;
 const past=(d,s)=>{if(d!==iso(new Date())||!/^\d\d:\d\d$/.test(s))return false;const n=new Date();return s<=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0')};
-function drawCal(){const a=ACTS[cur],m=st.m,y=m.getFullYear(),mo=m.getMonth(),first=(new Date(y,mo,1).getDay()+6)%7,n=new Date(y,mo+1,0).getDate(),t0=iso(new Date()),lim=iso(new Date(Date.now()+ADV*864e5)),now=new Date(),start=y===now.getFullYear()&&mo===now.getMonth();
+function drawCal(){const a=ACTS[cur],m=st.m,y=m.getFullYear(),mo=m.getMonth(),first=(new Date(y,mo,1).getDay()+6)%7,n=new Date(y,mo+1,0).getDate(),t0=iso(new Date()),advanceDays=Number.isFinite(Number(a.advanceDays))?Number(a.advanceDays):ADV,lim=iso(new Date(Date.now()+advanceDays*864e5)),now=new Date(),start=y===now.getFullYear()&&mo===now.getMonth();
  let c=`<div class="ch"><button class="nv" data-n="-1" ${start?'disabled':''} aria-label="Previous month">&#8249;</button><b>${m.toLocaleDateString('en-ZA',{month:'long',year:'numeric'})}</b><button class="nv" data-n="1" ${iso(new Date(y,mo+1,1))>lim?'disabled':''} aria-label="Next month">&#8250;</button></div><div class="cg">`+['Mo','Tu','We','Th','Fr','Sa','Su'].map(d=>`<i>${d}</i>`).join('')+'<span></span>'.repeat(first);
  for(let d=1;d<=n;d++){const s=iso(new Date(y,mo,d)),x=s<t0||s>lim||isClosed(s)||S(a,s).every(k=>full(s,k[0])||past(s,k[0]));c+=`<button class="cd" data-d="${s}" aria-pressed="${st.date===s}" ${x?'disabled':''}>${d}</button>`}
  $('#cal').innerHTML=c+'</div>'}
@@ -595,6 +595,9 @@ function paint(){const a=ACTS[cur],box=$('#sl');if(!box)return;
  $('#sn').textContent=db?'Struck-through times are already booked.':'Live availability is not available in this view, so booking is switched off. Please call the club.'}
 async function book(){const a=ACTS[cur],er=$('#er'),n=$('#nm').value.trim(),m=$('#em').value.trim(),ph=$('#ph').value.trim();
  if(!st.date||!st.slot)return er.textContent='Please choose a date and time.';
+ const allowedDays=Number.isFinite(Number(a.advanceDays))?Number(a.advanceDays):ADV;
+ const latestDate=iso(new Date(Date.now()+allowedDays*864e5));
+ if(st.date>latestDate)return er.textContent='Bookings for this activity can only be made '+allowedDays+' days ahead.';
  if(!n||!/^\S+@\S+\.\S+$/.test(m)||ph.length<7)return er.textContent='Please enter your name, a valid email and contact number.';
  if(!db)return er.textContent='Online booking is unavailable here. Please call '+CFG.phone+'.';
  er.textContent='';$('#go').disabled=true;const ref='LCB-'+Math.random().toString(36).slice(2,8).toUpperCase();let ok=false;
@@ -656,7 +659,12 @@ async function refreshClubData(){
    rows.forEach(r=>{const day=Number(r.day_of_week),i=day===0?6:day-1;week[i]=r.is_closed||!r.open_time||!r.close_time?null:[String(r.open_time).slice(0,5),String(r.close_time).slice(0,5)]});
    ACTS[key].wk=week;ACTS[key].h=wkRows(week);
    const rule=rules.find(r=>String(r.activity||'').toLowerCase()===activity);
-   if(rule){if(ACTS[key].win)ACTS[key].win[2]=Number(rule.interval_minutes)||ACTS[key].win[2];ACTS[key].cap=Number(rule.capacity)||ACTS[key].cap;}
+   if(rule){
+    if(ACTS[key].win)ACTS[key].win[2]=Number(rule.interval_minutes)||ACTS[key].win[2];
+    ACTS[key].cap=Number(rule.capacity)||ACTS[key].cap;
+    const advanceDays=Number(rule.advance_days);
+    if(Number.isFinite(advanceDays)&&advanceDays>=0)ACTS[key].advanceDays=advanceDays;
+   }
   }
   if(ACTS['tee-times'].wk.some(Boolean))CLUB.splice(0,CLUB.length,...wkRows(ACTS['tee-times'].wk));
   CLOSED=closed.map(r=>({date:r.closed_date,note:r.reason||''}));
