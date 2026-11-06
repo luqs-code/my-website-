@@ -335,6 +335,13 @@ html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 96px)}
 .court-option[aria-pressed=true] small{color:#e4e9df}
 @media(max-width:560px){.slots{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.slot{min-height:50px;font-size:14px}.court-options{grid-template-columns:repeat(2,minmax(0,1fr))}.court-option b{font-size:17px}.date-chip{flex-basis:62px;min-height:82px}}
 
+
+/* Bowls flow: date first, then green and lane quantity, then time */
+.bowls-choice{margin:22px 0 24px;padding:18px;border:1px solid var(--rule);border-radius:14px;background:rgba(255,255,255,.28)}
+.bowls-choice label{display:block;margin:0 0 9px}
+.bowls-choice .booking-select{display:block;margin-bottom:16px}
+.bowls-choice .booking-select:last-child{margin-bottom:0}
+
 </style>
 </head>
 <body>
@@ -593,7 +600,8 @@ function drawInfo(){const a=ACTS[cur];head(a,'The club',a.t,a.d);if(a.info)retur
  $('#pb').innerHTML=`<section><div class="wrap split"><div>${hrs(a.h)}<p style="margin-top:26px"><a class="btn fill" style="background:var(--fairway);color:#f4f4ec" href="#book-${cur}">Book now</a></p></div><div><img class="ph" src="${img(a.img)}" alt="${a.t}"></div></div></section>`+(cur==='tee-times'?`<section class="alt" id="course2">${$('#course').innerHTML}</section>`:'')+((cur==='squash'||cur==='bowls')?`<section class="alt"><div class="wrap"><p class="sub">Gallery</p><h2>${cur==='squash'?'On court.':'On the green.'}</h2><div class="agal">${$(cur==='squash'?'#sqimgs':'#bwimgs').innerHTML}</div></div></section>`:'')+(cur==='venue'?`<section class="alt"><div class="wrap"><p class="sub">The venue</p><h2>By day and by night.</h2>${$('#vgal').outerHTML.replace('id="vgal"','')}</div></section>`:'')}
 function drawBook(){const a=ACTS[cur];head(a,'Reserve online','Book now','Choose an activity, then a date and a time.');
  $('#pb').innerHTML=`<section><div class="wrap"><div class="tabs">${Object.keys(ACTS).filter(k=>!ACTS[k].info).map(k=>`<a href="#book-${k}" ${k===cur?'aria-current="true"':''}>${ACTS[k].bt}</a>`).join('')}</div>
- <div class="bk"><div id="f">${(cur==='bowls'?`<label for="green">Choose a green</label><select class="booking-select" id="green"><option value="1">Green 1</option><option value="2">Green 2</option></select><label for="lanes">Number of lanes</label><select class="booking-select" id="lanes">${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${n===2?'selected':''}>${n} ${n===1?'lane':'lanes'}</option>`).join('')}</select>`:cur==='squash'?`<label for="duration">Session duration</label><select class="booking-select" id="duration"><option value="45">45 minutes</option><option value="90">90 minutes (two consecutive sessions)</option></select>`:'')}<label>Date</label><div class="cal" id="cal"></div>
+ <div class="bk"><div id="f">${(cur==='squash'?`<label for="duration">Session duration</label><select class="booking-select" id="duration"><option value="45">45 minutes</option><option value="90">90 minutes (two consecutive sessions)</option></select>`:'')}<label>Date</label><div class="cal" id="cal"></div>
+ ${cur==='bowls'?`<div class="bowls-choice"><label for="green">Choose a green</label><select class="booking-select" id="green"><option value="1">Green 1</option><option value="2">Green 2</option></select><label for="lanes">Number of lanes</label><select class="booking-select" id="lanes">${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${n===2?'selected':''}>${n} ${n===1?'lane':'lanes'}</option>`).join('')}</select></div>`:''}
  <label>Available times</label><div class="slots" id="sl"></div><p class="note" id="sn"></p><div id="court-options"></div>
  <label for="nm">Full name</label><input id="nm" autocomplete="name"><label for="em">Email</label><input id="em" type="email" autocomplete="email"><label for="ph">Contact number</label><input id="ph" type="tel" autocomplete="tel">
  <p class="err" id="er"></p><button class="btn go" id="go" ${(cur==='bowls'||cur==='squash')&&!BOOKING_TEST_MODE?'disabled':''}>${(cur==='bowls'||cur==='squash')?'Request booking':'Confirm booking'}</button><p class="note" id="booking-mode-note"></p></div>
@@ -637,7 +645,7 @@ function drawBook(){const a=ACTS[cur];head(a,'Reserve online','Book now','Choose
    if(!BOOKING_TEST_MODE){box.innerHTML='';$('#sn').textContent='Live availability is not available in this view, so booking is switched off. Please call the club.';return}
    if(availabilityBusy){box.innerHTML='<p class="note">Checking live availability…</p>';$('#sn').textContent='Checking directly with the Lake Club booking system.';return}
    if(availabilityError){box.innerHTML='<p class="note">Availability could not be loaded.</p>';$('#sn').textContent=availabilityError+' Please call the club while we verify the connection.';return}
-   const count=currentLaneCount();box.className='slots';box.innerHTML=availabilityRows.length?availabilityRows.map(row=>{const free=row.resources.length>=(cur==='bowls'?count:1);const detail=cur==='bowls'?` · ${row.resources.length} lanes available`:'';return `<button class="slot" data-s="${row.time}" aria-pressed="${st.slot===row.time}" ${!free?'disabled':''}>${row.time}${free?detail:''}</button>`}).join(''):'<p class="note">No bookable times on this date.</p>';
+   const count=currentLaneCount();box.className='slots';box.innerHTML=availabilityRows.length?availabilityRows.map(row=>{const free=row.resources.length>=(cur==='bowls'?count:1);return `<button class="slot" data-s="${row.time}" aria-pressed="${st.slot===row.time}" ${!free?'disabled':''}>${row.time}</button>`}).join(''):'<p class="note">No bookable times on this date.</p>';
    box.querySelectorAll('.slot').forEach(b=>b.onclick=()=>{st.slot=b.dataset.s;st.court=null;paintSlots()});
    const courtBox=$('#court-options');
    if(courtBox){
