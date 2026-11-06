@@ -314,6 +314,27 @@ html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 96px)}
 .cd{display:flex;flex-direction:column;align-items:center;justify-content:center}.cd.ev::after{content:"";width:5px;height:5px;border-radius:50%;background:var(--accent);margin-top:2px}.cd.td{border-color:#a7823d}.cd.ev[aria-pressed=true]::after{background:#f4f4ec}
 .evc{display:flex;gap:14px;align-items:center;border:1px solid var(--rule);border-radius:14px;background:var(--card);padding:14px;margin-bottom:10px;box-shadow:var(--sh)}.evc h3{font-size:22px;margin:0}
 .evd{min-width:54px;text-align:center}.evd b{display:block;font:500 28px "Newsreader",serif;line-height:1}.evd small{font:600 11px "Instrument Sans";letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}.sub2{color:var(--sub);margin:4px 0 0;font-size:15px}
+
+/* Lake Club streamlined booking UI */
+.date-strip{display:flex;gap:9px;overflow-x:auto;overscroll-behavior-x:contain;padding:7px 2px 13px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+.date-chip{flex:0 0 66px;min-height:88px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;border:1px solid var(--rule);border-radius:34px;background:var(--bg);color:var(--text);scroll-snap-align:start;cursor:pointer;font:inherit}
+.date-chip small{font-size:12px;color:var(--sub);text-transform:uppercase;letter-spacing:.04em}
+.date-chip b{font:500 23px "Newsreader",serif}
+.date-chip[aria-pressed=true]{background:var(--fairway);border-color:var(--fairway);color:#f4f4ec}
+.date-chip[aria-pressed=true] small{color:#e4e9df}
+.date-chip:disabled{opacity:.28;cursor:not-allowed}
+.booking-select{width:100%;max-width:360px;min-height:48px;padding:10px 38px 10px 14px;border:1px solid var(--rule);border-radius:9px;background:var(--bg);color:var(--text);font:inherit}
+#cal{max-width:none;border:0;padding:0;background:transparent}
+.slots{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;max-width:620px}
+.slot{min-height:48px;padding:10px 5px;border:1px solid var(--rule);border-radius:9px;background:var(--bg);color:var(--text);font:500 15px "Instrument Sans",sans-serif;cursor:pointer}
+.slot[aria-pressed=true]{background:var(--fairway);border-color:var(--fairway);color:#f4f4ec}
+.slot:disabled{opacity:.35;text-decoration:line-through;cursor:not-allowed}
+.court-options{grid-template-columns:repeat(2,minmax(0,1fr));max-width:620px;margin:12px 0 8px}
+.court-option{border-radius:9px;min-height:76px;padding:13px}
+.court-option[aria-pressed=true]{background:var(--fairway);color:#f4f4ec;border-color:var(--fairway)}
+.court-option[aria-pressed=true] small{color:#e4e9df}
+@media(max-width:560px){.slots{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.slot{min-height:50px;font-size:14px}.court-options{grid-template-columns:repeat(2,minmax(0,1fr))}.court-option b{font-size:17px}.date-chip{flex-basis:62px;min-height:82px}}
+
 </style>
 </head>
 <body>
@@ -572,13 +593,13 @@ function drawInfo(){const a=ACTS[cur];head(a,'The club',a.t,a.d);if(a.info)retur
  $('#pb').innerHTML=`<section><div class="wrap split"><div>${hrs(a.h)}<p style="margin-top:26px"><a class="btn fill" style="background:var(--fairway);color:#f4f4ec" href="#book-${cur}">Book now</a></p></div><div><img class="ph" src="${img(a.img)}" alt="${a.t}"></div></div></section>`+(cur==='tee-times'?`<section class="alt" id="course2">${$('#course').innerHTML}</section>`:'')+((cur==='squash'||cur==='bowls')?`<section class="alt"><div class="wrap"><p class="sub">Gallery</p><h2>${cur==='squash'?'On court.':'On the green.'}</h2><div class="agal">${$(cur==='squash'?'#sqimgs':'#bwimgs').innerHTML}</div></div></section>`:'')+(cur==='venue'?`<section class="alt"><div class="wrap"><p class="sub">The venue</p><h2>By day and by night.</h2>${$('#vgal').outerHTML.replace('id="vgal"','')}</div></section>`:'')}
 function drawBook(){const a=ACTS[cur];head(a,'Reserve online','Book now','Choose an activity, then a date and a time.');
  $('#pb').innerHTML=`<section><div class="wrap"><div class="tabs">${Object.keys(ACTS).filter(k=>!ACTS[k].info).map(k=>`<a href="#book-${k}" ${k===cur?'aria-current="true"':''}>${ACTS[k].bt}</a>`).join('')}</div>
- <div class="bk"><div id="f">${(cur==='bowls'?`<label for="green">Choose a green</label><select id="green"><option value="1">Green 1</option><option value="2">Green 2</option></select><label for="lanes">Number of lanes</label><select id="lanes">${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${n===2?'selected':''}>${n} ${n===1?'lane':'lanes'}</option>`).join('')}</select>`:cur==='squash'?`<label for="duration">Session duration</label><select id="duration"><option value="45">45 minutes</option><option value="90">90 minutes (two consecutive sessions)</option></select>`:'')}<label>Date</label><div class="cal" id="cal"></div>
- <label>Time</label><div id="court-options"></div><div class="slots" id="sl"></div><p class="note" id="sn"></p>
+ <div class="bk"><div id="f">${(cur==='bowls'?`<label for="green">Choose a green</label><select class="booking-select" id="green"><option value="1">Green 1</option><option value="2">Green 2</option></select><label for="lanes">Number of lanes</label><select class="booking-select" id="lanes">${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${n===2?'selected':''}>${n} ${n===1?'lane':'lanes'}</option>`).join('')}</select>`:cur==='squash'?`<label for="duration">Session duration</label><select class="booking-select" id="duration"><option value="45">45 minutes</option><option value="90">90 minutes (two consecutive sessions)</option></select>`:'')}<label>Date</label><div class="cal" id="cal"></div>
+ <label>Available times</label><div class="slots" id="sl"></div><p class="note" id="sn"></p><div id="court-options"></div>
  <label for="nm">Full name</label><input id="nm" autocomplete="name"><label for="em">Email</label><input id="em" type="email" autocomplete="email"><label for="ph">Contact number</label><input id="ph" type="tel" autocomplete="tel">
  <p class="err" id="er"></p><button class="btn go" id="go" ${(cur==='bowls'||cur==='squash')&&!BOOKING_TEST_MODE?'disabled':''}>${(cur==='bowls'||cur==='squash')?'Request booking':'Confirm booking'}</button><p class="note" id="booking-mode-note"></p></div>
  <div>${hrs(a.h,a.bt+' hours')}<p class="note" style="margin-top:18px">Prefer to speak to someone? Call <a href="tel:+27114211341">${CFG.phone}</a>.</p></div></div></div></section>`;
  if(cur==='tee-times'&&CM){$('#f').innerHTML=`<div class="conf"><p class="sub">Tee sheet</p><h2>Book your tee time online.</h2><p class="note">Golf tee times are booked on the club’s own tee sheet, so the times you see are always up to date. It opens in a new tab and takes four short steps:</p><ol class="note" style="margin:0 0 18px;padding-left:20px"><li>Choose your date and tee time.</li><li>Fill in your details and pick your rate.</li><li>A provisional reservation is created.</li><li>Pay online to finalise your booking.</li></ol><p><a class="btn fill" style="background:var(--fairway);color:#f4f4ec" target="_blank" rel="noopener" href="${CM}">Open the tee sheet</a></p></div>`;return}
- const n0=new Date();st.m=new Date(n0.getFullYear(),n0.getMonth(),1);$('#cal').onclick=e=>{const v=e.target.closest('.nv'),b=e.target.closest('.cd');if(v&&!v.disabled){st.m=new Date(st.m.getFullYear(),st.m.getMonth()+(+v.dataset.n),1);paint()}else if(b&&!b.disabled){st.date=b.dataset.d;st.slot=null;st.court=null;availabilityRows=[];paint();if(isSupabaseActivity())loadSupabaseAvailability()}};$('#go').onclick=book;['green','lanes','duration'].forEach(id=>{const el=$('#'+id);if(el)el.onchange=()=>{st.slot=null;st.court=null;availabilityRows=[];paint();if(isSupabaseActivity()&&st.date)loadSupabaseAvailability()}});const note=$('#booking-mode-note');if(note){if(isSupabaseActivity()&&BOOKING_TEST_MODE)note.textContent='TEST MODE: requests are sent to the manager dashboard and remain pending until approved.';else if(isSupabaseActivity())note.textContent='Online booking is currently switched off while we complete testing. Please call the club.';}watch();paint();if(isSupabaseActivity()&&BOOKING_TEST_MODE&&st.date)loadSupabaseAvailability()}
+ const n0=new Date();st.m=new Date(n0.getFullYear(),n0.getMonth(),1);$('#cal').onclick=e=>{const b=e.target.closest('.date-chip');if(b&&!b.disabled){st.date=b.dataset.d;st.slot=null;st.court=null;availabilityRows=[];paint();if(isSupabaseActivity())loadSupabaseAvailability()}};$('#go').onclick=book;['green','lanes','duration'].forEach(id=>{const el=$('#'+id);if(el)el.onchange=()=>{st.slot=null;st.court=null;availabilityRows=[];paint();if(isSupabaseActivity()&&st.date)loadSupabaseAvailability()}});const note=$('#booking-mode-note');if(note){if(isSupabaseActivity()&&BOOKING_TEST_MODE)note.textContent='TEST MODE: requests are sent to the manager dashboard and remain pending until approved.';else if(isSupabaseActivity())note.textContent='Online booking is currently switched off while we complete testing. Please call the club.';}watch();paint();if(isSupabaseActivity()&&BOOKING_TEST_MODE&&st.date)loadSupabaseAvailability()}
  let availabilityRows=[],availabilityBusy=false,availabilityError='',availabilityTimer=null;
  const isSupabaseActivity=()=>cur==='bowls'||cur==='squash';
  function currentDuration(){return cur==='squash'?Number($('#duration')?.value||45):60}
@@ -590,10 +611,15 @@ function drawBook(){const a=ACTS[cur];head(a,'Reserve online','Book now','Choose
   un=db.collection('bookings').where('act','==',cur).onSnapshot(s=>{occ={};s.docs.forEach(x=>{const d=x.data()||{};if(d.date){const o=occ[d.date]=occ[d.date]||{};o[d.slot]=(o[d.slot]||0)+1}});paint()},()=>{});paint()}
  const full=(d,s)=>((occ[d]||{})[s]||0)>=ACTS[cur].cap;
  const past=(d,s)=>{if(d!==iso(new Date())||!/^\d\d:\d\d$/.test(s))return false;const n=new Date();return s<=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0')};
- function drawCal(){const a=ACTS[cur],m=st.m,y=m.getFullYear(),mo=m.getMonth(),first=(new Date(y,mo,1).getDay()+6)%7,n=new Date(y,mo+1,0).getDate(),t0=iso(new Date()),lim=iso(new Date(Date.now()+maxAdvance()*864e5)),now=new Date(),start=y===now.getFullYear()&&mo===now.getMonth();
-  let c=`<div class="ch"><button class="nv" data-n="-1" ${start?'disabled':''} aria-label="Previous month">&#8249;</button><b>${m.toLocaleDateString('en-ZA',{month:'long',year:'numeric'})}</b><button class="nv" data-n="1" ${iso(new Date(y,mo+1,1))>lim?'disabled':''} aria-label="Next month">&#8250;</button></div><div class="cg">`+['Mo','Tu','We','Th','Fr','Sa','Su'].map(d=>`<i>${d}</i>`).join('')+'<span></span>'.repeat(first);
-  for(let d=1;d<=n;d++){const day=iso(new Date(y,mo,d)),x=day<t0||day>lim||isClosed(day)||S(a,day).length===0;c+=`<button class="cd" data-d="${day}" aria-pressed="${st.date===day}" ${x?'disabled':''}>${d}</button>`}
-  $('#cal').innerHTML=c+'</div>'}
+ function drawCal(){
+  const a=ACTS[cur],today=new Date(),todayISO=iso(today),limit=iso(new Date(Date.now()+maxAdvance()*864e5));
+  let c='<div class="date-strip" role="group" aria-label="Choose booking date">';
+  for(let i=0;i<=maxAdvance();i++){
+   const d=new Date(today.getFullYear(),today.getMonth(),today.getDate()+i),day=iso(d),disabled=day>limit||isClosed(day)||S(a,day).length===0;
+   c+=`<button class="date-chip" type="button" data-d="${day}" aria-pressed="${st.date===day}" ${disabled?'disabled':''}><small>${d.toLocaleDateString('en-ZA',{weekday:'short'})}</small><b>${d.getDate()}</b><small>${d.toLocaleDateString('en-ZA',{month:'short'})}</small></button>`;
+  }
+  $('#cal').innerHTML=c+'</div>';
+ }
  async function loadSupabaseAvailability(){
   if(!isSupabaseActivity()||!BOOKING_TEST_MODE||!st.date||!publicSupabase){availabilityRows=[];paintSlots();return}
   const a=ACTS[cur],times=S(a,st.date),duration=currentDuration(),green=currentGreen();availabilityBusy=true;availabilityError='';availabilityRows=[];paintSlots();
