@@ -630,9 +630,13 @@ function drawBook(){const a=ACTS[cur];head(a,'Reserve online','Book now','Choose
  }
  async function loadSupabaseAvailability(){
   if(!isSupabaseActivity()||!BOOKING_TEST_MODE||!st.date||!publicSupabase){availabilityRows=[];paintSlots();return}
-  const a=ACTS[cur],times=S(a,st.date),duration=currentDuration(),green=currentGreen();availabilityBusy=true;availabilityError='';availabilityRows=[];paintSlots();
+  const a=ACTS[cur],times=S(a,st.date),duration=currentDuration(),green=currentGreen();
+  const dayHours=a.wk?.[(new Date(st.date+'T12:00').getDay()+6)%7];
+  const closingMinute=dayHours?t2m(dayHours[1]):(a.win?.[1]??1440);
+  const validTimes=times.filter(([time])=>t2m(time)+duration<=closingMinute);
+  availabilityBusy=true;availabilityError='';availabilityRows=[];paintSlots();
   try{
-   const checks=await Promise.all(times.filter(([time])=>!past(st.date,time)).map(async([time])=>{
+   const checks=await Promise.all(validTimes.filter(([time])=>!past(st.date,time)).map(async([time])=>{
     const {data,error}=await publicSupabase.rpc('get_lake_club_available_resources',{p_activity:cur,p_date:st.date,p_start_time:time,p_duration_minutes:duration,p_green_number:green});
     if(error)throw error;return {time,resources:data||[]};
    }));
