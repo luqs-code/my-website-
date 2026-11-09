@@ -610,7 +610,7 @@ function drawBook(){const a=ACTS[cur];head(a,'Reserve online','Book now','Choose
  <div>${hrs(a.h,a.bt+' hours')}<p class="note" style="margin-top:18px">Prefer to speak to someone? Call <a href="tel:+27114211341">${CFG.phone}</a>.</p></div></div></div></section>`;
  if(cur==='tee-times'&&CM){$('#f').innerHTML=`<div class="conf"><p class="sub">Tee sheet</p><h2>Book your tee time online.</h2><p class="note">Golf tee times are booked on the club’s own tee sheet, so the times you see are always up to date. It opens in a new tab and takes four short steps:</p><ol class="note" style="margin:0 0 18px;padding-left:20px"><li>Choose your date and tee time.</li><li>Fill in your details and pick your rate.</li><li>A provisional reservation is created.</li><li>Pay online to finalise your booking.</li></ol><p><a class="btn fill" style="background:var(--fairway);color:#f4f4ec" target="_blank" rel="noopener" href="${CM}">Open the tee sheet</a></p></div>`;return}
  const n0=new Date();st.m=new Date(n0.getFullYear(),n0.getMonth(),1);$('#cal').onclick=e=>{const b=e.target.closest('.date-chip');if(b&&!b.disabled){st.date=b.dataset.d;st.slot=null;st.court=null;availabilityRows=[];paint();if(isSupabaseActivity())loadSupabaseAvailability()}};$('#go').onclick=book;['green','lanes','duration'].forEach(id=>{const el=$('#'+id);if(el)el.onchange=()=>{st.slot=null;st.court=null;availabilityRows=[];paint();if(isSupabaseActivity()&&st.date)loadSupabaseAvailability()}});const note=$('#booking-mode-note');if(note){if(isSupabaseActivity()&&BOOKING_TEST_MODE)note.textContent='TEST MODE: requests are sent to the manager dashboard and remain pending until approved.';else if(isSupabaseActivity())note.textContent='Online booking is currently switched off while we complete testing. Please call the club.';}watch();paint();if(isSupabaseActivity()&&BOOKING_TEST_MODE&&st.date)loadSupabaseAvailability()}
- let availabilityRows=[],availabilityBusy=false,availabilityError='',availabilityTimer=null;
+ let availabilityRows=[],availabilityBusy=false,availabilityError='',availabilityTimer=null,availabilityRequestId=0;
  const isSupabaseActivity=()=>cur==='bowls'||cur==='squash';
  function currentDuration(){return cur==='squash'?Number($('#duration')?.value||45):60}
  function currentGreen(){return cur==='bowls'?Number($('#green')?.value||1):null}
@@ -631,7 +631,8 @@ function drawBook(){const a=ACTS[cur];head(a,'Reserve online','Book now','Choose
   $('#cal').innerHTML=c+'</div>';
  }
  async function loadSupabaseAvailability(){
-  if(!isSupabaseActivity()||!BOOKING_TEST_MODE||!st.date||!publicSupabase){availabilityRows=[];paintSlots();return}
+  const requestId=++availabilityRequestId;
+  if(!isSupabaseActivity()||!BOOKING_TEST_MODE||!st.date||!publicSupabase){availabilityRows=[];availabilityBusy=false;paintSlots();return}
   const a=ACTS[cur],times=S(a,st.date),duration=currentDuration(),green=currentGreen();
   const dayHours=a.wk?.[(new Date(st.date+'T12:00').getDay()+6)%7];
   const closingMinute=dayHours?t2m(dayHours[1]):(a.win?.[1]??1440);
@@ -642,8 +643,9 @@ function drawBook(){const a=ACTS[cur];head(a,'Reserve online','Book now','Choose
     const {data,error}=await publicSupabase.rpc('get_lake_club_available_resources',{p_activity:cur,p_date:st.date,p_start_time:time,p_duration_minutes:duration,p_green_number:green});
     if(error)throw error;return {time,resources:data||[]};
    }));
+   if(requestId!==availabilityRequestId)return;
    availabilityRows=checks;availabilityBusy=false;paintSlots();
-  }catch(err){availabilityBusy=false;availabilityError=err?.message||'Could not load live availability.';availabilityRows=[];paintSlots();console.warn('Lake Club availability failed:',err)}
+  }catch(err){if(requestId!==availabilityRequestId)return;availabilityBusy=false;availabilityError=err?.message||'Could not load live availability.';availabilityRows=[];paintSlots();console.warn('Lake Club availability failed:',err)}
  }
  function paintSlots(){const box=$('#sl');if(!box)return;
   if(!st.date){box.innerHTML='';$('#sn').textContent=BOOKING_TEST_MODE&&isSupabaseActivity()?'Choose a date to check live availability.':'Live availability is not available in this view, so booking is switched off. Please call the club.';return}
@@ -678,6 +680,7 @@ function drawBook(){const a=ACTS[cur];head(a,'Reserve online','Book now','Choose
     const args={p_activity:cur,p_customer_name:n,p_customer_email:m,p_customer_phone:ph,p_booking_date:st.date,p_start_time:st.slot,p_duration_minutes:currentDuration(),p_green_number:cur==='bowls'?currentGreen():null,p_court_number:cur==='squash'?currentCourt():null,p_lane_count:cur==='bowls'?currentLaneCount():null};
     const {data,error}=await publicSupabase.rpc('create_lake_club_booking',args);if(error)throw error;
     const result=typeof data==='string'?JSON.parse(data):data;
+    if(!result||result.status!=='pending'||!result.booking_reference||!Array.isArray(result.allocated_resources))throw new Error('The booking service returned an incomplete confirmation. Please contact the club before trying again.');
     $('#f').innerHTML=`<div class="conf"><p class="sub">Request received</p><h2>Thanks, ${esc(n.split(' ')[0])}.</h2><p>Your booking request has been sent to The Lake Club. It is <b>pending manager approval</b>; your time is not confirmed yet.</p><dl><dt>Activity</dt><dd>${esc(a.bt)}</dd><dt>Date</dt><dd>${esc(st.date)}</dd><dt>Time</dt><dd>${esc(st.slot)}</dd><dt>Duration</dt><dd>${currentDuration()} minutes</dd>${cur==='squash'?`<dt>Selected court</dt><dd>${currentCourt()===1?'Court 1 (Glass)':`Court ${currentCourt()} (Standard)`}</dd>`:''}<dt>Allocation</dt><dd>${(result.allocated_resources||[]).map(esc).join(', ')||'To be confirmed'}</dd><dt>Reference</dt><dd>${esc(result.booking_reference||'')}</dd><dt>Status</dt><dd>Pending</dd></dl><p class="note">The club will review your request. Please contact the club if you need assistance.</p></div>`;
    }catch(err){er.textContent=err?.message||'We could not submit your request. Please try again.';go.disabled=false;console.warn('Lake Club booking submission failed:',err)}
    return;
@@ -717,7 +720,8 @@ const PUBLIC_SUPABASE_URL='https://amqenbyonnomfstmrrzy.supabase.co';
 const PUBLIC_SUPABASE_KEY='sb_publishable_liMr6KCQ55sIcHK84OJ2ew_fSZ_Elqi';
 let publicSupabase=null;
 let PUBLIC_PRICE_ROWS=[];
-const BOOKING_TEST_MODE=new URLSearchParams(location.search).get('bookingtest')==='1';
+// Test bookings may only be enabled on a local development server, never on the public GitHub Pages site.
+const BOOKING_TEST_MODE=['localhost','127.0.0.1'].includes(location.hostname)&&new URLSearchParams(location.search).get('bookingtest')==='1';
 const BOOKING_ADVANCE={bowls:14,squash:7};
 function renderPublicPrices(){
  const host=document.querySelector('#public-prices');if(!host)return;
